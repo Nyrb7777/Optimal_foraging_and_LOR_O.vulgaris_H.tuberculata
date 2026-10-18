@@ -4,3 +4,6 @@
 .Ruserdata
 *.xlsx
 *.Rproj
+*.jmp
+How to Git.Rmd
+How to Git.html
