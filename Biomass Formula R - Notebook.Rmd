@@ -1,0 +1,96 @@
+```{r}
+
+
+library("tidyverse")
+library(ggpubr)
+library(ggpmisc)  
+
+
+setwd("C:/Users/bwvma/OneDrive - ucsc.edu/One Drive Back Up/R-Studio/Octodata")
+```
+
+```{r}
+rm(list = ls())
+
+Octo_Biomass_Calc <- read_csv ("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\Biomass formula calculator.csv")
+
+Biomass_formula_data <- Octo_Biomass_Calc |> 
+  select(length,`weight (g)`,`abalone #`)
+
+Biomass_formula_data
+```
+```{r}
+Calculating_Biomass_graph <- Biomass_formula_data |> 
+  ggplot(aes(
+    x=length,
+    y=`weight (g)`))+
+ 
+  geom_point() +
+  scale_x_continuous(
+    limits = c(0,NA)
+  ) +
+  
+  geom_smooth(
+   method = lm,
+   fullrange = TRUE,
+   formula = y ~0+ x + I(x^2) + I(x^3),
+   colour = "blue"
+) +
+  
+  geom_line(
+    aes(
+      x = length,
+      y = 0.06858280385283284374953 * length^3 + 0.22034755586896595525026 * length^2 + 0.20579305903708586256151 * length),
+    colour = "red"
+    )
+
+
+Calculating_Biomass_graph
+
+model <- lm(`weight (g)` ~ 0 + length + I(length^2) + I(length^3),
+            data = Biomass_formula_data)
+
+summary(model)
+format(model$coefficients, digits = 22, scientific = FALSE)
+
+
+
+
+
+
+ggsave(Calculating_Biomass_graph, filename="Calculating_Biomass_Formula_Graph.png",dpi=600, height=7, width=10)
+  
+# y = 0.06858280385283284374953 * length^3 + 0.22034755586896595525026 * length^2 + 0.20579305903708586256151 * length
+```
+```{r}
+Field_Data_Set <- read_csv ("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\FINAL DATA SET (BIOMASS CORRECTED).csv")
+
+Corrected_Biomass_data_set <- Field_Data_Set |> 
+  select(`Shell Length`) |> 
+  mutate(Biomass = 0.06858280385283284374953 * `Shell Length`^3 + 0.22034755586896595525026 * `Shell Length`^2 + 0.20579305903708586256151 * `Shell Length`)
+
+
+Corrected_Biomass_graph <- Corrected_Biomass_data_set |> 
+  ggplot(aes(
+    x=`Shell Length`,
+    y=Biomass))+
+ 
+  geom_point() +
+  scale_x_continuous(
+    limits = c(0,NA)
+  ) +
+  
+  geom_smooth(
+   method = lm,
+   fullrange = TRUE,
+   formula = y ~0+ x + I(x^2) + I(x^3),
+   colour = "blue"
+)
+
+Corrected_Biomass_data_set
+Corrected_Biomass_graph
+
+```
+
+
+

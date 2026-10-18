@@ -152,7 +152,7 @@ Graph_2_Combined <- Graph_Top/Graph_Bottom + #patchwork
  theme(legend.position = "right") 
 
 
-ggsave(Graph_2_Combined, filename="Calibri Graph 2 Lab Trials Treatment,movement Prob and distance.png",dpi=600, height=7, width=10)
+ggsave(Graph_2_Combined, filename="Current Graph 2 Lab Trials Treatment,movement Prob and distance.png",dpi=600, height=7, width=10)
 
 Graph_2_Combined 
 ```
