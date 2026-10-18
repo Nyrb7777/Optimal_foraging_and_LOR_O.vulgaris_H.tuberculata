@@ -1,0 +1,211 @@
+```{r}
+rm(list = ls())
+```
+
+
+```{r}
+library("tidyverse")
+library("patchwork")
+library("scales")
+library("nlme")
+
+setwd("C:/Users/bwvma/OneDrive - ucsc.edu/One Drive Back Up/R-Studio/Octodata")
+Octo <- read_csv("Octo Trials Data (Control, Octo, Octo treatment) 2 3.csv")
+```
+
+```{r}
+library("extrafont")
+
+theme_set(
+  theme_classic(base_size = 18.46, base_family = "Calibri")
+)
+```
+
+
+```{r}
+
+  Graph_data_Top = Octo |> 
+   filter(Treatment != "Octo Eating") |>
+  select(Treatment,`Movement? 2`) |> 
+    mutate(
+    Treatment = recode(Treatment, "Control" = "Control", "Octo" = "Octopus Present"))|> 
+    arrange(Treatment)
+
+Graph_Top <- Graph_data_Top |> #sorted data in graph_data_1
+  group_by(Treatment) |> 
+  summarize(mean_chance_of_movement=mean(`Movement? 2`),
+            SD=sd(`Movement? 2`),
+            n=n(),
+            SE=SD/sqrt(n)) |> 
+  
+  ggplot(aes(x = Treatment, 
+             y = mean_chance_of_movement,
+             fill=Treatment,
+             )) +
+  geom_col() +
+  scale_fill_manual(values = c("#0072B2", "#D55E00"),
+                    name = NULL)+ #changes legend title)+
+  geom_errorbar(
+    aes(
+      ymin = mean_chance_of_movement - SE,
+      ymax = mean_chance_of_movement + SE
+    ),
+    width = 0.15,
+    linewidth = 0.6
+  ) +
+  
+  geom_text(aes(label = paste0(round(mean_chance_of_movement*100),"%")),
+            vjust = -0.5,
+            hjust = -0.5
+            ) +
+  geom_text(x = 0.5, y = 0.65, label = "(a)") +
+
+  labs(
+    x = NULL,
+    y = "Probability of Movement (%)"
+  ) +
+  scale_x_discrete(
+    labels = c(NULL,NULL) #renames x axis labels
+  ) +
+  
+  scale_y_continuous( 
+    
+    labels = scales::percent_format(), #formats y axis as percentages
+    limits = c(0, 0.70), # set limit of y axis
+    expand = c(0, 0) # removes space between bar and x axis
+  ) +
+    
+    theme(panel.grid.major = element_line(color = alpha("gray", 0.5), #alpha value of line
+                                          linewidth = 0.5),
+          panel.grid.minor = element_line(color = alpha("gray", 0.3),
+                                          linewidth = 0.25)
+)
+  
+
+Graph_Top #shows graph below
+```
+```{r}
+Graph_data_Bottom = Octo |> 
+  filter(Treatment != "Octo Eating") |> 
+  select(`Distance (cm)`,`Treatment`) |>
+  mutate(
+    Treatment = recode(Treatment, "Control" = "Control", "Octo" = "Octopus Present")
+      
+  )
+
+Graph_Bottom <- Graph_data_Bottom |> #sorted data in graph_data_1
+  group_by(Treatment) |> 
+  summarize(mean_distance=mean(`Distance (cm)`),
+            SD=sd(`Distance (cm)`),
+            n=n(),
+            SE=SD/sqrt(n)) |>
+  ggplot(aes(x = Treatment, 
+             y = mean_distance,
+             fill=Treatment,
+             )) +
+  geom_col() +
+   scale_fill_manual(values = c("#0072B2", "#D55E00"),
+                     name = NULL)+ #changes legend title
+  geom_errorbar(
+    aes(
+      ymin = mean_distance - SE,
+      ymax = mean_distance + SE
+    ),
+    width = 0.15,
+    linewidth = 0.6
+  ) +
+  geom_text(aes(label = paste0(round(mean_distance,2)," cm")),
+            vjust = -0.5,
+            hjust = -0.5
+            ) +
+  
+  geom_text(x = 0.5, y = 8.3, label = "(b)") +
+  
+  labs(
+    x = "Treatment",
+    y = "Mean Distance Moved (cm)",
+    
+  ) +
+  scale_x_discrete(
+    labels = c(NULL,NULL) #renames x axis labels
+  ) +
+  
+
+  scale_y_continuous(
+    limits = c(0, 9), #sets limit of y axis
+    expand = c(0, 0) #removes space between bar and x axis
+  )+
+  
+  theme(panel.grid.major = element_line(color = alpha("gray", 0.5), #alpha value of line
+                                          linewidth = 0.5),
+          panel.grid.minor = element_line(color = alpha("gray", 0.3),
+                                          linewidth = 0.25)
+)
+
+Graph_Bottom #shows graph below
+
+```
+```{r}
+
+Graph_2_Combined <- Graph_Top/Graph_Bottom + #patchwork
+  plot_layout(guides = "collect") +
+ theme(legend.position = "right") 
+
+
+ggsave(Graph_2_Combined, filename="Calibri Graph 2 Lab Trials Treatment,movement Prob and distance.png",dpi=600, height=7, width=10)
+
+Graph_2_Combined 
+```
+```{r}
+library(lme4)
+library(lmerTest)
+
+
+
+Graph_Top_Stats_Data <-
+  Graph_data_Top |>
+  select(Treatment, `Movement? 2`) |> 
+  mutate(ID = row_number()) #creates ID column for random effect)
+
+  
+  
+ Graph_Top_Stats <- glmer(
+  `Movement? 2` ~ Treatment + (1 | ID),
+  data = Graph_Top_Stats_Data,
+  family = binomial
+)
+
+anova(Graph_Top_Stats, type = 3)
+summary(Graph_Top_Stats)
+anova(Graph_Top_Stats)
+
+
+Graph_data_Top
+
+```
+```{r}
+Graph_Bottom_Stats_data <-
+  Graph_data_Bottom |>
+  select(Treatment, `Distance (cm)`) |> 
+  mutate(`Log_distance_plus1` = log(`Distance (cm)`+1)) |> 
+  mutate(ID = row_number()) #creates ID column for random effect)
+
+ 
+Graph_Bottom_Stats <- lme(
+   `Log_distance_plus1` ~ Treatment, random = ~1|ID, 
+     data = Graph_Bottom_Stats_data)
+
+
+anova(Graph_Bottom_Stats)
+
+Graph_Bottom_Stats_data
+```
+
+
+
+
+
+```{r}
+citation()
+```
+

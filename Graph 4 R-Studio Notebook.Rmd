@@ -1,0 +1,238 @@
+```{r}
+rm(list = ls())
+```
+
+
+```{r}
+library("tidyverse")
+library("ggplot2")
+```
+
+```{r}
+setwd("C:/Users/bwvma/OneDrive - ucsc.edu/One Drive Back Up/R-Studio/Octodata")
+
+library("extrafont")
+
+
+theme_set(
+  theme_classic(base_size = 18.46, base_family = "Calibri")
+)
+```
+
+```{r}
+rm(list = ls())
+Octo <- read.csv("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\FINAL DATA SET (BIOMASS CORRECTED).csv")
+```
+
+```{r}
+rm(list = ls())
+Octo <- read.csv("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\FINAL DATA SET (BIOMASS CORRECTED).csv")
+
+Corrected_Biomass <- Octo |>
+  filter(Treatment != "Control") |>
+  select(Distance.Value,Biomass,Shell.Length,Den.Number,Transect..N..E..S..W.) |> 
+    mutate(Corrected.Biomass =
+  0.06858280385283284374953 * Shell.Length^3 + 0.22034755586896595525026 * Shell.Length^2 + 0.20579305903708586256151 * Shell.Length) |> 
+  select(Den.Number,Distance.Value,Corrected.Biomass,Transect..N..E..S..W.)
+
+
+Median_Biomass <- median(Corrected_Biomass$Corrected.Biomass, na.rm = TRUE)
+
+Biomass_Cats <- Corrected_Biomass |>
+  select(Den.Number, Distance.Value, Transect..N..E..S..W.,Corrected.Biomass) |>
+  group_by(Distance.Value) |>
+  arrange(Distance.Value) |> 
+  mutate(
+    Biomass.cat = ifelse(
+      Corrected.Biomass >= Median_Biomass,
+      "Large",
+      "Small"
+    )
+  )
+
+
+Corrected_Biomass
+Biomass_Cats
+Median_Biomass
+```
+```{r}
+
+counts <- Biomass_Cats |>
+  count(Den.Number, Distance.Value, Biomass.cat,Transect..N..E..S..W.) |>
+  ungroup() |> 
+  complete(
+    Den.Number = c("3","7","8","12"),
+    Distance.Value = c(0.5,1,1.5,2,2.5),
+    Biomass.cat = c("Small", "Large"),
+    Transect..N..E..S..W. = c("North","East","South","West"),
+    fill = list(n = 0)
+  ) |>
+  arrange(Den.Number,Transect..N..E..S..W., Distance.Value, Biomass.cat)
+
+write_csv(counts,"counts.csv")
+```
+
+```{r}
+mean_counts <- counts |>
+  group_by(Distance.Value, Biomass.cat) |>
+  summarise(mean_n = mean(n), .groups = "drop")
+
+mean_counts
+
+```
+```{r}
+ci_lines <- mean_counts |>
+  group_by(Biomass.cat) |>
+  summarise(
+    mean = mean(mean_n),
+    sd = sd(mean_n),
+    n = n(),
+    se = sd / sqrt(n),
+    t = qt(0.975, df = n - 1),
+    ci_low = mean - se,
+    ci_high = mean + se
+  )
+
+ci_lines
+```
+```{r}
+model <- mean_counts |> 
+  group_by(Biomass.cat) |> 
+  do(
+    model = lm(mean_n ~ poly(Distance.Value, 3), data = .)
+  )
+  
+rsq_values <- model |> 
+  mutate(
+    r_squared = summary(model)$r.squared)|>
+
+  select(Biomass.cat, r_squared)
+
+rsq_values
+
+```
+
+```{r}
+Graph_4 <- mean_counts |> 
+  ggplot(
+    aes(
+      x=Distance.Value,
+      y=mean_n,
+      colour = Biomass.cat,
+      
+  ))+
+  
+   geom_rect(
+    data = ci_lines |> 
+      filter(Biomass.cat == "Large"),
+    aes(
+      xmin = -Inf,
+    xmax = Inf,
+    ymin = ci_low,
+    ymax = ci_high
+    ),
+    alpha = 0.15,
+    fill = "#0072B2",
+    inherit.aes = FALSE
+    )+
+  
+  geom_rect(
+    data = ci_lines |> 
+      filter(Biomass.cat == "Small"),
+    aes(
+      xmin = -Inf,
+    xmax = Inf,
+    ymin = ci_low,
+    ymax = ci_high
+    ),
+    alpha = 0.15,
+    fill = "#D55E00",
+    inherit.aes = FALSE
+    )+
+  
+  
+  geom_hline(
+      yintercept = mean(mean_counts$mean_n[mean_counts$Biomass.cat == "Large"]),
+      colour = "#0072B2")+
+    
+  geom_hline(
+      yintercept = mean(mean_counts$mean_n[mean_counts$Biomass.cat == "Small"]),
+      colour = "#D55E00")+
+ 
+  geom_point()+
+  geom_smooth(method = "lm",
+              formula = y~ poly(x,3),
+              se = FALSE)+
+  scale_colour_manual(
+    values=c("#0072B2","#D55E00")
+  )+
+  
+  geom_text(
+  data = rsq_values,
+  aes(
+    x = 2.4,
+    y = ifelse(Biomass.cat == "Large", 0.2, 0.1),
+    label = paste0("R² = ", round(r_squared, 3)),
+    colour = Biomass.cat
+  ),
+  inherit.aes = FALSE,
+  show.legend = FALSE
+)+
+  
+  labs(
+    x = "Distance from Den (m)",
+    y = "Mean Count"
+  ) +
+  
+  scale_colour_manual(
+    values = c("Large" = "#0072B2", "Small" = "#D55E00"),
+    name = "Size Category",
+    labels = c("Larger than Median Biomass", "Smaller than Median Biomass")
+  )+
+  
+  theme(
+    legend.position = c(0.6,0.11),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    legend.background = element_rect(fill = alpha("white", 0))
+  )
+  
+Graph_4
+
+ggsave(Graph_4, filename="Calibri Graph 4 Curves Mean Count vs Distance From Den.png",dpi=600, height=5.32, width=6.5, units="in")
+
+mean_counts
+
+```
+```{r}
+model_cubic <- mean_counts |> 
+  group_by(Biomass.cat) |> 
+  do(
+    model = lm(mean_n ~ poly(Distance.Value, 3), data = .)
+  )
+
+model_quadratic <- mean_counts |> 
+  group_by(Biomass.cat) |> 
+  do(
+    model = lm(mean_n ~ poly(Distance.Value, 2), data = .)
+  )
+
+model_linear <- mean_counts |>
+  group_by(Biomass.cat) |>
+  do(
+    model = lm(mean_n ~ poly(Distance.Value, 1), data = .)
+  )
+
+model_logisitic <- mean_counts |> 
+  group_by(Biomass.cat) |> 
+  do(
+    model = lm(log(mean_n) ~ poly(Distance.Value, 3), data = .)
+  )
+
+sapply(model_cubic$model, BIC)
+sapply(model_quadratic$model, BIC)
+sapply(model_linear$model, BIC)
+sapply(model_logisitic$model, BIC)
+```
+
+

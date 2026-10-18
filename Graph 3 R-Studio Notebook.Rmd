@@ -1,0 +1,237 @@
+
+
+
+```{r}
+library("tidyverse")
+library("patchwork")
+library("scales")
+library("ggpubr")
+library("ggpmisc")  
+
+setwd("C:/Users/bwvma/OneDrive - ucsc.edu/One Drive Back Up/R-Studio/Octodata")
+
+```
+
+
+```{r}
+rm(list = ls())
+
+Octo_Field <- read_csv ("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\Midden and live abalone lengths and biomass by location and quality 2 2.csv")
+
+Octo_Biomass_Calc <- read_csv ("C:\\Users\\bwvma\\OneDrive - ucsc.edu\\One Drive Back Up\\R-Studio\\Octodata\\Biomass formula calculator.csv")
+
+Biomass_formula_data <- Octo_Biomass_Calc |> 
+  select(length,`weight (g)`,`abalone #`)
+
+Biomass_formula_data
+```
+```{r}
+library("extrafont")
+
+theme_set(
+  theme_classic(base_size = 18.46, base_family = "Calibri")
+)
+```
+
+```{r}
+Calculating_Biomass_graph <- Biomass_formula_data |> 
+  ggplot(aes(
+    x=length,
+    y=`weight (g)`))+
+ 
+  geom_point() +
+  scale_x_continuous(
+    limits = c(0,NA)
+  ) +
+  
+  geom_smooth(
+   method = lm,
+   fullrange = TRUE,
+   formula = y ~0+ x + I(x^2) + I(x^3),
+   colour = "blue"
+) +
+  
+  geom_line(
+    aes(
+      x = length,
+      y = 0.06858280385283284374953 * length^3 + 0.22034755586896595525026 * length^2 + 0.20579305903708586256151 * length),
+    colour = "red"
+    )
+
+
+Calculating_Biomass_graph
+
+model_cubic <- lm(`weight (g)` ~ 0 + length + I(length^2) + I(length^3),
+            data = Biomass_formula_data)
+
+model_logisitic <- lm(log(`weight (g)`) ~ 0 + length + I(length^2) + I(length^3),
+            data = Biomass_formula_data)
+
+model_quadratic <- lm(`weight (g)` ~ length + I(length^2),
+         data = Biomass_formula_data)
+
+model_linear <- lm(`weight (g)` ~ length,
+         data = Biomass_formula_data)
+
+
+format(model_cubic$coefficients, digits = 22, scientific = FALSE)
+
+summary(model_cubic)$r.squared
+summary(model_quadratic)$r.squared
+summary(model_linear)$r.squared
+
+BIC(model_cubic)
+BIC(model_quadratic)
+BIC(model_linear)
+
+
+
+
+ggsave(Calculating_Biomass_graph, filename="Calculating_Biomass_Formula_Graph.png",dpi=600, height=7, width=10)
+  
+# y = 0.06858280385283284374953 * length^3 + 0.22034755586896595525026 * length^2 + 0.20579305903708586256151 * length
+```
+```{r}
+
+Corrected_Biomass_data_set <- Octo_Field |> 
+  select(`Shell Length`,Location) |> 
+  mutate(Biomass = 0.06858280385283284374953 * `Shell Length`^3 + 0.22034755586896595525026 * `Shell Length`^2 + 0.20579305903708586256151 * `Shell Length`) |> 
+  
+  arrange(Biomass)
+
+Corrected_Biomass_graph <- Corrected_Biomass_data_set |> 
+  ggplot(aes(
+    x=`Shell Length`,
+    y=Biomass))+
+ 
+  geom_point() +
+  scale_x_continuous(
+    limits = c(0,NA)
+  ) +
+  
+  geom_smooth(
+   method = lm,
+   fullrange = TRUE,
+   formula = y ~0+ x + I(x^2) + I(x^3),
+   colour = "blue"
+)
+
+Corrected_Biomass_data_set
+Corrected_Biomass_graph
+```
+
+
+```{r}
+Graph_Top <- Corrected_Biomass_data_set |>
+  filter(Location == "Alive") |>
+  ggplot(aes(x = Biomass)) +
+  geom_histogram(
+    aes(y = ..count.. / sum(..count..)),
+    bins = 13, # Number of bars
+    fill = "#0072B2",
+    color = "white",
+    boundary = 0
+  ) +
+  
+   geom_text(x = -0.75, y = .30, label = "(a)") +
+  
+  
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    x = NULL,
+    y = NULL, 
+    title = "Live Abalone Population"
+  ) +
+  coord_cartesian(xlim = c(0,30))
+
+Graph_Top
+```
+
+
+```{r}
+Graph_Middle <- Corrected_Biomass_data_set |>
+  filter(Location == "Good Midden") |>
+  ggplot(aes(x = Biomass)) +
+  geom_histogram(
+    aes(y = ..count.. / sum(..count..)),
+    bins = 13,
+    fill = "#0072B2",
+    color = "white",
+    
+  ) +
+  
+  geom_text(x = -0.655, y = 0.20, label = "(b)") +
+  
+  
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    x = NULL,
+    y = "Biomass Distribution (%)",
+    title = expression("Midden Near " *italic ("H. tuberculata")* " Aggregation"),
+  ) +
+  coord_cartesian(xlim = c(0,30))
+Graph_Middle
+```
+
+
+```{r}
+Graph_Bottom <- Corrected_Biomass_data_set |>
+  filter(Location == "Poor Midden") |>
+  ggplot(aes(x = Biomass)) +
+  geom_histogram(
+    aes(y = ..count.. / sum(..count..)),
+    bins = 13,
+    fill = "#0072B2",
+    color = "white",
+  ) +
+  
+   geom_text(x = -0.655, y = 0.15, label = "(c)") +
+  
+  
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    x = "Biomass (g)",
+    y = NULL,
+    title = expression("Midden Far from " *italic ("H. tuberculata")* " Aggregation")
+  ) +
+  coord_cartesian(xlim = c(0,30))
+Graph_Bottom
+```
+
+
+```{r}
+Graph_Top
+Graph_Middle
+Graph_Bottom
+```
+
+
+```{r}
+Graph_3_Combined <- Graph_Top/Graph_Middle/Graph_Bottom
+  
+ggsave(Graph_3_Combined, filename="Calibri Graph 3 Distrob Probability of H. tuberculata movement.png",dpi=600, height=7, width=10)
+
+Graph_3_Combined
+```
+```{r}
+ks_test_Alive_vs_Near <-
+ks.test(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Alive"],
+        Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Good Midden"])
+
+ks_test_Alive_vs_Far <-
+ks.test(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Alive"],
+        Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Poor Midden"])
+
+ks_test_Near_vs_Far <-
+ks.test(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Good Midden"],
+        Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Poor Midden"])
+
+length(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Good Midden"])
+length(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Poor Midden"])
+length(Corrected_Biomass_data_set$Biomass[Corrected_Biomass_data_set$Location == "Alive"])
+
+ks_test_Alive_vs_Near
+ks_test_Alive_vs_Far
+ks_test_Near_vs_Far
+```
+
