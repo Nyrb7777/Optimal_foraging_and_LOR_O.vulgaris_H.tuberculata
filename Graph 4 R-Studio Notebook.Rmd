@@ -13,6 +13,30 @@ setwd("C:/Users/bwvma/OneDrive - ucsc.edu/One Drive Back Up/R-Studio/Octodata")
 
 library("extrafont")
 
+#theme_set(
+ # theme_classic() +
+  #  theme(
+      # Global default for most text
+   #   text = element_text(family = "Calibri", size = 12),
+
+      # Plot-level text
+    #  plot.title = element_text(family = "Calibri", size = 12),
+     # plot.subtitle = element_text(family = "Calibri", size = 12),
+    #  plot.caption = element_text(family = "Calibri", size = 12),
+     # plot.tag = element_text(family = "Calibri", size = 12),
+
+      # Axis text
+    #  axis.title = element_text(family = "Calibri", size = 12),
+    #  axis.text = element_text(family = "Calibri", size = 12),
+
+      # Legend text
+     # legend.text = element_text(family = "Calibri", size = 12),
+    #  legend.title = element_text(family = "Calibri", size = 12),
+
+      # Facet strips
+     # strip.text = element_text(family = "Calibri", size = 12)
+  #  )
+# )
 
 theme_set(
   theme_classic(base_size = 18.46, base_family = "Calibri")
@@ -203,36 +227,6 @@ ggsave(Graph_4, filename="Calibri Graph 4 Curves Mean Count vs Distance From Den
 
 mean_counts
 
-```
-```{r}
-model_cubic <- mean_counts |> 
-  group_by(Biomass.cat) |> 
-  do(
-    model = lm(mean_n ~ poly(Distance.Value, 3), data = .)
-  )
-
-model_quadratic <- mean_counts |> 
-  group_by(Biomass.cat) |> 
-  do(
-    model = lm(mean_n ~ poly(Distance.Value, 2), data = .)
-  )
-
-model_linear <- mean_counts |>
-  group_by(Biomass.cat) |>
-  do(
-    model = lm(mean_n ~ poly(Distance.Value, 1), data = .)
-  )
-
-model_logisitic <- mean_counts |> 
-  group_by(Biomass.cat) |> 
-  do(
-    model = lm(log(mean_n) ~ poly(Distance.Value, 3), data = .)
-  )
-
-sapply(model_cubic$model, BIC)
-sapply(model_quadratic$model, BIC)
-sapply(model_linear$model, BIC)
-sapply(model_logisitic$model, BIC)
 ```
 
 
