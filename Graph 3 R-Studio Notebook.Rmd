@@ -209,7 +209,7 @@ Graph_Bottom
 ```{r}
 Graph_3_Combined <- Graph_Top/Graph_Middle/Graph_Bottom
   
-ggsave(Graph_3_Combined, filename="Current Graph 3 Distrob Probability of H. tuberculata movement.tiff",dpi=600, height=7, width=10)
+ggsave(Graph_3_Combined, filename="Figure 3.tiff",dpi=600, height=7, width=10)
 
 Graph_3_Combined
 ```
